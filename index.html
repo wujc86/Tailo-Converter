@@ -2,89 +2,345 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>臺灣台語臺羅轉換工具</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臺羅拼音轉換工具</title>
     <script src="web_database.js"></script>
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background: #fdfdfd; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { color: #2b579a; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        textarea { width: 100%; height: 150px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
-        .btn { background: #2b579a; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-size: 18px; width: 100%; font-weight: bold; }
-        .btn:hover { background: #1e3e6d; }
-        #output { margin-top: 20px; padding: 15px; background: #f4f7f9; border-radius: 8px; min-height: 100px; white-space: pre-wrap; line-height: 1.8; font-size: 18px; color: #333; border: 1px solid #e1e8ed; }
-        .tag { font-size: 14px; color: #666; text-align: right; margin-top: 10px; }
-        #db-status { font-weight: bold; }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f5f6fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", "Segoe UI", Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card-header {
+            font-size: 1.25em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+
+        /* 讓結果輸入框看起來更像結果呈現 */
+        .editable-result {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .result-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            min-height: 40px;
+        }
+
+        .result-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .result-content {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            white-space: pre-wrap;
+        }
+
+        .detail-row {
+            font-size: 0.9em;
+            color: #555;
+            margin-top: 5px;
+            border-bottom: 1px dashed #eee;
+            padding: 4px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            color: white;
+        }
+        .badge-man { background-color: #e74c3c; }
+        .badge-bo { background-color: #f39c12; }
+        .badge-peh { background-color: #27ae60; }
+        .badge-sec { background-color: #95a5a6; }
+
+        .loading {
+            text-align: center;
+            font-size: 1.2em;
+            color: #7f8c8d;
+            padding: 50px;
+        }
+
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>臺羅轉換</h1>
-    
-    <p>請輸入漢字：</p>
-    <textarea id="input-text" placeholder="例如：逐家好，食飽未？"></textarea>
-    
-    <button id="convert-btn" class="btn">🚀 立即轉換 (Tâi-lô)</button>
+<div id="loading" class="loading">
+    資料載入中，請稍候...<br>
+    <small>(請確認 web_database.js 是否存在)</small>
+</div>
 
-    <div id="output">等待輸入中...</div>
-    <div class="tag">資料庫狀態：<span id="db-status">載入中...</span></div>
+<div id="app" class="container hidden">
+    <h1>臺羅拼音離線轉換工具</h1>
+
+    <div class="card">
+        <div class="card-header">🅰️ 漢字轉臺羅</div>
+        <div class="input-group">
+            <label for="hanjiInput">輸入漢字：</label>
+            <input type="text" id="hanjiInput" placeholder="例如：中華民國" oninput="convertHanji()">
+        </div>
+        <div class="result-box">
+            <div class="result-label">建議臺羅</div>
+            <div id="hanjiResult" class="result-content">-</div>
+        </div>
+        <div class="result-box">
+            <div class="result-label">詳細資訊</div>
+            <div id="hanjiDetails" class="result-content" style="font-weight: normal; font-size: 0.95em;"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">🗣️ IPA 轉臺羅</div>
+        <div class="input-group">
+            <label for="langSelect">選擇語言：</label>
+            <select id="langSelect" onchange="convertIPA()">
+                <option value="英">英語</option>
+                <option value="德">德語</option>
+                <option value="法">法語</option>
+                <option value="西">西班牙語</option>
+                <option value="義">義大利語</option>
+                <option value="俄">俄語</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="ipaInput">輸入 IPA ，可依臺灣音感修改：</label>
+            <input type="text" id="ipaInput" placeholder="例如：bɑɚˈbedos" oninput="convertIPA()">
+        </div>
+        <div class="result-box">
+            <div class="result-label">轉換結果(注意t若送氣要改th)</div>
+            <input type="text" id="ipaResult" class="editable-result" value="-">
+        </div>
+        <div class="result-box">
+            <div class="result-label">轉換歷程</div>
+            <div id="ipaTrace" class="result-content" style="font-weight: normal; font-size: 0.9em; font-family: monospace;"></div>
+        </div>
+    </div>
 </div>
 
 <script>
-    // 1. 檢查 web_database.js 是否成功載入全域變數 TAILO_DB
+    let DB = null;
+
     window.onload = function() {
-        // 你的 JS 檔案定義的是 window.TAILO_DB
-        if (typeof TAILO_DB !== 'undefined') {
-            document.getElementById('db-status').innerText = "✅ 已就緒";
-            document.getElementById('db-status').style.color = "green";
+        if (window.TAILO_DB) {
+            DB = window.TAILO_DB;
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
         } else {
-            document.getElementById('db-status').innerText = "❌ 載入失敗 (請檢查檔案名稱或變數名)";
-            document.getElementById('db-status').style.color = "red";
+            alert("錯誤：無法讀取 web_database.js");
         }
     };
 
-    // 2. 轉換邏輯
-    document.getElementById('convert-btn').onclick = function() {
-        const input = document.getElementById('input-text').value;
-        const outputArea = document.getElementById('output');
+    function convertHanji() {
+        const input = document.getElementById('hanjiInput').value.trim();
+        const resultDiv = document.getElementById('hanjiResult');
+        const detailsDiv = document.getElementById('hanjiDetails');
         
-        if (input.trim() === "") {
-            alert("請先輸入文字");
+        if (!input) {
+            resultDiv.innerText = "-";
+            detailsDiv.innerText = "";
             return;
         }
 
-        // 再次確認資料庫是否存在
-        if (typeof TAILO_DB === 'undefined' || !TAILO_DB.hanji) {
-            alert("資料庫尚未就緒，請檢查 web_database.js");
-            return;
-        }
+        let finalOutput = [];
+        let detailsHtml = "";
 
-        outputArea.innerText = "正在處理中...";
-        
-        let result = "";
-        
-        // 遍歷輸入的每一個字進行查表
         for (let char of input) {
-            // 檢查該漢字是否存在於資料庫中
-            if (TAILO_DB.hanji[char]) {
-                const entry = TAILO_DB.hanji[char];
+            if (DB.hanji[char]) {
+                const data = DB.hanji[char];
+                let bestMatch = char;
+                if (data['文'] && data['文'].length > 0) bestMatch = data['文'][0];
+                else if (data['無'] && data['無'].length > 0) bestMatch = data['無'][0];
+                else if (data['白'] && data['白'].length > 0) bestMatch = data['白'][0];
                 
-                // 根據資料結構優先序取值：無 > 白 > 文
-                // 你的資料格式：entry.無 是陣列，所以取第一個元素 [0]
-                const pinyin = (entry.無 && entry.無.length > 0) ? entry.無[0] :
-                               (entry.白 && entry.白.length > 0) ? entry.白[0] :
-                               (entry.文 && entry.文.length > 0) ? entry.文[0] : char;
-                
-                result += pinyin + " ";
+                finalOutput.push(bestMatch);
+
+                let variants = [];
+                if(data['文']) data['文'].forEach(p => variants.push(`<span class="badge badge-man">文</span>${p}`));
+                if(data['無']) data['無'].forEach(p => variants.push(`<span class="badge badge-bo">無</span>${p}`));
+                if(data['白']) data['白'].forEach(p => variants.push(`<span class="badge badge-peh">白</span>${p}`));
+                let others = [];
+                if(data['替']) others.push(...data['替']);
+                if(data['俗']) others.push(...data['俗']);
+                if(others.length > 0) others.forEach(p => variants.push(`<span class="badge badge-sec">他</span>${p}`));
+
+                detailsHtml += `<div class="detail-row"><strong>${char}</strong> : ${variants.join(' / ')}</div>`;
             } else {
-                // 若找不到對應字（如標點符號或資料庫未收錄字），維持原樣
-                result += char;
+                finalOutput.push(char);
             }
         }
+        resultDiv.innerText = finalOutput.join("-");
+        detailsDiv.innerHTML = detailsHtml;
+    }
 
-        // 移除多餘空格並顯示結果
-        outputArea.innerText = result.trim();
-    };
+    function segmentAndConvert(ipaStr, mapping, lang) {
+        if (!mapping['languages'][lang]) lang = '英';
+        const comboMap = mapping['languages'][lang]['combinations'];
+        const sortedKeys = Object.keys(comboMap).sort((a, b) => b.length - a.length);
+        
+        let i = 0;
+        let segments = []; 
+        let trace = [];
+        
+        while (i < ipaStr.length) {
+            let matched = false;
+            for (let key of sortedKeys) {
+                if (ipaStr.startsWith(key, i)) {
+                    let val = comboMap[key];
+                    segments.push(val); 
+                    trace.push(`'${key}' → ${val}`);
+                    i += key.length;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                i++;
+            }
+        }
+        return { segments, trace };
+    }
+
+    function processWord(word, mapping, lang) {
+        let cleanWord = word.replace(/ː/g, '');
+        let parts = cleanWord.split(/[ˈˌ.\-]/).filter(p => p.trim() !== "");
+        
+        let wordSegments = []; 
+        let allTrace = [];
+        
+        for (let part of parts) {
+            let res = segmentAndConvert(part, mapping, lang);
+            if (res.segments.length > 0) {
+                wordSegments.push(...res.segments);
+            }
+            if (res.trace.length > 0) {
+                allTrace.push(...res.trace);
+            }
+        }
+        
+        return {
+            result: wordSegments.join("-"), 
+            trace: allTrace
+        };
+    }
+
+    function convertIPA() {
+        const ipaInput = document.getElementById('ipaInput').value.trim();
+        const lang = document.getElementById('langSelect').value;
+        const resultInput = document.getElementById('ipaResult');
+        const traceDiv = document.getElementById('ipaTrace');
+
+        if (!ipaInput) {
+            resultInput.value = "-";
+            traceDiv.innerText = "";
+            return;
+        }
+
+        const mappingPri = DB.ipa['主要'];
+        const mappingSec = DB.ipa['次要'];
+        const words = ipaInput.split(/\s+/); 
+        
+        let resPriList = [];
+        let resSecList = [];
+        let traceLog = [];
+
+        words.forEach((word, idx) => {
+            if (!word) return;
+            let p = processWord(word, mappingPri, lang);
+            let s = processWord(word, mappingSec, lang);
+
+            if (p.result) resPriList.push(p.result);
+            if (s.result) resSecList.push(s.result);
+            if (p.trace.length > 0) traceLog.push(`[詞${idx+1}] ${p.trace.join(", ")}`);
+        });
+
+        let finalPri = resPriList.join("-");
+        let finalSec = resSecList.join("-");
+        
+        if(finalPri) finalPri = finalPri.charAt(0).toUpperCase() + finalPri.slice(1);
+        if(finalSec) finalSec = finalSec.charAt(0).toUpperCase() + finalSec.slice(1);
+
+        let displayStr = "";
+        if (finalPri === finalSec || !finalSec) {
+            displayStr = finalPri;
+        } else {
+            displayStr = `${finalPri} (${finalSec})`;
+        }
+
+        resultInput.value = displayStr;
+        traceDiv.innerHTML = traceLog.join("<br>");
+    }
 </script>
 </body>
 </html>
