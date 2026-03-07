@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>臺灣閩南語臺羅轉換工具 (離線版)</title>
+    <title>臺灣台語臺羅轉換工具</title>
     <script src="web_database.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background: #fdfdfd; }
@@ -17,9 +17,9 @@
 <body>
 
 <div class="container">
-    <h1>臺羅轉換離線版</h1>
+    <h1>臺羅轉換</h1>
     
-    <p>請輸入漢字或語料：</p>
+    <p>請輸入漢字：</p>
     <textarea id="input-text" placeholder="例如：逐家好，食飽未？"></textarea>
     
     <button id="convert-btn" class="btn">🚀 立即轉換 (Tâi-lô)</button>
@@ -43,9 +43,6 @@
     document.getElementById('convert-btn').onclick = function() {
         const input = document.getElementById('input-text').value;
         const outputArea = document.getElementById('output');
-        
-        // 假設您的 web_database.js 中有一個名為 convertToTailo 的函式
-        // 或者您在這裡實作比對字典的邏輯
         if (input.trim() === "") {
             alert("請先輸入文字");
             return;
