@@ -29,18 +29,17 @@
 </div>
 
 <script>
-    // 1. 檢查資料庫是否成功載入
+    // 1. 檢查 TAILO_DB 是否成功載入
     window.onload = function() {
-        if (typeof web_database !== 'undefined') {
-            document.getElementById('db-status').innerText = "✅ 已就緒";
+        if (typeof TAILO_DB !== 'undefined') {
+            document.getElementById('db-status').innerText = "✅ 已就緒 (變數：TAILO_DB)";
             document.getElementById('db-status').style.color = "green";
         } else {
-            document.getElementById('db-status').innerText = "❌ 載入失敗 (請檢查 web_database.js 檔案內容)";
+            document.getElementById('db-status').innerText = "❌ 載入失敗 (請確認 web_database.js 檔案內容)";
             document.getElementById('db-status').style.color = "red";
         }
     };
 
-    // 2. 轉換邏輯
     document.getElementById('convert-btn').onclick = function() {
         const input = document.getElementById('input-text').value;
         const outputArea = document.getElementById('output');
@@ -50,30 +49,29 @@
             return;
         }
 
-        if (typeof web_database === 'undefined') {
-            alert("資料庫尚未載入，無法轉換");
+        if (typeof TAILO_DB === 'undefined') {
+            alert("資料庫尚未載入");
             return;
         }
 
         outputArea.innerText = "正在處理中...";
 
-        // 獲取所有詞條，並依照字數「由長到短」排序（Longest Match First）
-        // 這樣可以確保「逐家好」優先於「逐家」被匹配
-        const keys = Object.keys(web_database).sort((a, b) => b.length - a.length);
-        
-        let result = input;
+        // 這裡我們針對輸入的每一個字進行查表
+        let result = "";
+        for (let char of input) {
+            // 檢查字是否存在於資料庫的 hanji 屬性中
+            if (TAILO_DB.hanji[char]) {
+                // 優先取「無」裡面的拼音，若無則取「白」或「文」
+                const entry = TAILO_DB.hanji[char];
+                const pinyin = entry.無[0] || entry.白[0] || entry.文[0] || char;
+                result += pinyin + " ";
+            } else {
+                // 如果找不到（例如標點符號或資料庫沒收錄的字），就維持原樣
+                result += char;
+            }
+        }
 
-        // 使用正則表達式進行全域替換
-        keys.forEach(key => {
-            // 使用 RegExp 逸出特殊字元並建立全域匹配
-            const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(escapedKey, 'g');
-            // 替換時加上空格以便閱讀，並使用一個暫存標記避免重複替換
-            result = result.replace(regex, ` ${web_database[key]} `);
-        });
-
-        // 清理多餘空格並顯示
-        outputArea.innerText = result.replace(/\s+/g, ' ').trim();
+        outputArea.innerText = result.trim();
     };
 </script>
 </body>
