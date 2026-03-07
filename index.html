@@ -19,7 +19,7 @@
             color: var(--primary-color);
             margin: 0;
             padding: 15px;
-            line-height: 1.3;
+            line-height: 1.4;
         }
 
         .container { max-width: 900px; margin: 0 auto; }
@@ -41,9 +41,9 @@
             padding-bottom: 5px;
         }
 
-        input[type="text"], select {
+        input[type="text"] {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 1em;
@@ -54,72 +54,79 @@
             background-color: #f8f9fa;
             border: 1px solid #e9ecef;
             border-radius: 4px;
-            padding: 10px;
+            padding: 12px;
             margin-top: 10px;
         }
 
         .result-label { font-size: 0.8em; color: #7f8c8d; margin-bottom: 4px; }
-        .result-content { font-size: 1.1em; font-weight: bold; color: #2c3e50; }
+        .result-content { font-size: 1.2em; font-weight: bold; color: #2c3e50; min-height: 1.2em; }
 
-        /* --- 超緊湊詳細資訊樣式 --- */
+        /* --- 讀音選項寬度與間距優化 --- */
         #hanjiDetails {
             display: flex;
             flex-direction: column;
-            gap: 2px; /* 每一列之間的極小間距 */
+            gap: 4px;
         }
 
         .detail-row {
             display: flex;
-            align-items: center;
-            padding: 2px 0;
+            align-items: flex-start; /* 讓長選項可以換行 */
+            padding: 6px 0;
             border-bottom: 1px solid #f0f0f0;
-            font-size: 0.9em;
         }
 
         .hanji-col {
-            min-width: 25px;
+            min-width: 35px; /* 稍微加寬漢字欄位 */
+            font-size: 1.1em;
             font-weight: bold;
-            color: var(--primary-color);
+            color: #2c3e50;
+            text-align: center;
             border-right: 2px solid #eee;
-            margin-right: 8px;
+            margin-right: 12px;
         }
 
         .readings-col {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px; /* 選項之間的水平間距 */
+            gap: 8px; /* 加大選項之間的水平與垂直間距 */
         }
 
         .variant-item {
             cursor: pointer;
-            padding: 1px 3px;
-            border-radius: 3px;
-            white-space: nowrap;
+            padding: 4px 10px; /* 加大點擊範圍 */
+            border: 1px solid #e0e0e0; /* 增加邊框，讓選項邊界明確 */
+            border-radius: 6px;
+            background-color: #fff;
+            font-size: 0.95em;
             display: flex;
             align-items: center;
+            transition: all 0.2s;
         }
 
-        .variant-item:hover { background-color: #e3f2fd; }
+        .variant-item:hover {
+            background-color: #ebf5ff;
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
 
         .badge {
             display: inline-block;
-            padding: 0px 3px;
-            border-radius: 2px;
-            font-size: 0.7em;
-            margin-right: 2px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            margin-right: 5px;
             color: white;
-            line-height: 1.2;
+            font-weight: bold;
         }
-        /* --- 結束 --- */
+        /* --- 結束優化 --- */
 
-        .badge-man { background-color: #e74c3c; }
-        .badge-bo { background-color: #f39c12; }
-        .badge-peh { background-color: #27ae60; }
-        .badge-sec { background-color: #95a5a6; }
+        .badge-man { background-color: #e74c3c; } /* 文 */
+        .badge-bo { background-color: #f39c12; }  /* 無 */
+        .badge-peh { background-color: #27ae60; } /* 白 */
+        .badge-sec { background-color: #95a5a6; } /* 替、俗 */
 
         .loading { text-align: center; color: #7f8c8d; padding: 40px; }
         .hidden { display: none; }
-        .editable-result { width: 100%; padding: 8px; border: 1px solid #e9ecef; background-color: #f8f9fa; border-radius: 4px; font-size: 1em; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -131,31 +138,16 @@
 
     <div class="card">
         <div class="card-header">🅰️ 漢字轉臺羅</div>
-        <input type="text" id="hanjiInput" placeholder="輸入漢字，例如：臺灣" oninput="convertHanji()">
+        <input type="text" id="hanjiInput" placeholder="輸入漢字，例如：逐家好，食飽未？" oninput="convertHanji()">
         
         <div class="result-box">
-            <div class="result-label">建議臺羅 (點擊下方切換)</div>
+            <div class="result-label">建議臺羅 (點擊下方選項可即時更換讀音)</div>
             <div id="hanjiResult" class="result-content">-</div>
         </div>
         
         <div class="result-box" style="background: white;">
-            <div class="result-label">詳細資訊</div>
+            <div class="result-label">詳細資訊 (讀音對照)</div>
             <div id="hanjiDetails"></div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">🗣️ IPA 轉臺羅</div>
-        <div style="margin-bottom:8px;">
-            <select id="langSelect" onchange="convertIPA()" style="width: auto; height: 30px; font-size: 0.9em;">
-                <option value="英">英語</option>
-                <option value="德">德語</option>
-                <option value="法">法語</option>
-            </select>
-        </div>
-        <input type="text" id="ipaInput" placeholder="輸入 IPA" oninput="convertIPA()">
-        <div class="result-box">
-            <input type="text" id="ipaResult" class="editable-result" value="-">
         </div>
     </div>
 </div>
@@ -166,7 +158,7 @@
 
     window.onload = function() {
         if (window.TAILO_DB) {
-            DB = window.TAILO_DB; 
+            DB = window.TAILO_DB; // 讀取上傳的資料庫變數
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
         }
@@ -183,8 +175,12 @@
         const resultDiv = document.getElementById('hanjiResult');
         let output = "";
         for (let i = 0; i < selectedReadings.length; i++) {
-            output += selectedReadings[i].pinyin;
-            if (selectedReadings[i].isHan && selectedReadings[i+1] && selectedReadings[i+1].isHan) {
+            const current = selectedReadings[i];
+            const next = selectedReadings[i + 1];
+            output += current.pinyin;
+            
+            // 標點符號邏輯：僅漢字與漢字間加上連字號
+            if (current.isHan && next && next.isHan) {
                 output += "-";
             }
         }
@@ -211,7 +207,7 @@
             let rowReadings = "";
 
             if (isH && DB.hanji[char]) {
-                const data = DB.hanji[char]; //
+                const data = DB.hanji[char]; // 取得該字的讀音分類陣列
                 
                 // 優先序：文 > 無 > 白
                 if (data['文'] && data['文'].length > 0) defaultPinyin = data['文'][0];
@@ -239,7 +235,11 @@
                         <div class="readings-col">${rowReadings}</div>
                     </div>`;
             } else if (isH) {
-                detailsHtml += `<div class="detail-row"><div class="hanji-col">${char}</div><div class="readings-col" style="color:#ccc;">未收錄</div></div>`;
+                detailsHtml += `
+                    <div class="detail-row">
+                        <div class="hanji-col">${char}</div>
+                        <div class="readings-col" style="color:#999; font-size:0.85em; padding-top:4px;">未收錄於資料庫</div>
+                    </div>`;
             }
 
             selectedReadings.push({ pinyin: defaultPinyin, isHan: isH });
@@ -247,26 +247,6 @@
 
         detailsDiv.innerHTML = detailsHtml;
         renderHanjiResult();
-    }
-
-    function convertIPA() {
-        const ipaInput = document.getElementById('ipaInput').value.trim();
-        if (!ipaInput || !DB.ipa) { document.getElementById('ipaResult').value = "-"; return; }
-        const res = ipaInput.split(/\s+/).map(word => {
-            let segs = [];
-            word.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim()).forEach(part => {
-                let i = 0, mapping = DB.ipa['主要'], lang = document.getElementById('langSelect').value;
-                const combo = mapping['languages'][lang]['combinations'];
-                const keys = Object.keys(combo).sort((a,b)=>b.length-a.length);
-                while(i < part.length){
-                    let m = false;
-                    for(let k of keys){ if(part.startsWith(k, i)){ segs.push(combo[k]); i+=k.length; m=true; break; } }
-                    if(!m) i++;
-                }
-            });
-            return segs.join("-");
-        }).join("-");
-        document.getElementById('ipaResult').value = res ? res.charAt(0).toUpperCase() + res.slice(1) : "-";
     }
 </script>
 </body>
