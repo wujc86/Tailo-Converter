@@ -8,10 +8,12 @@
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background: #fdfdfd; }
         .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1 { color: #2b579a; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        textarea { width: 100%; height: 150px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom: 15px; }
+        textarea { width: 100%; height: 150px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
         .btn { background: #2b579a; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-size: 18px; width: 100%; font-weight: bold; }
-        #output { margin-top: 20px; padding: 15px; background: #f4f7f9; border-radius: 8px; min-height: 100px; white-space: pre-wrap; line-height: 1.8; }
-        .tag { font-size: 12px; color: #666; text-align: right; }
+        .btn:hover { background: #1e3e6d; }
+        #output { margin-top: 20px; padding: 15px; background: #f4f7f9; border-radius: 8px; min-height: 100px; white-space: pre-wrap; line-height: 1.8; font-size: 18px; color: #333; border: 1px solid #e1e8ed; }
+        .tag { font-size: 14px; color: #666; text-align: right; margin-top: 10px; }
+        #db-status { font-weight: bold; }
     </style>
 </head>
 <body>
@@ -29,17 +31,19 @@
 </div>
 
 <script>
-    // 1. 檢查 TAILO_DB 是否成功載入
+    // 1. 檢查 web_database.js 是否成功載入全域變數 TAILO_DB
     window.onload = function() {
+        // 你的 JS 檔案定義的是 window.TAILO_DB
         if (typeof TAILO_DB !== 'undefined') {
-            document.getElementById('db-status').innerText = "✅ 已就緒 (變數：TAILO_DB)";
+            document.getElementById('db-status').innerText = "✅ 已就緒";
             document.getElementById('db-status').style.color = "green";
         } else {
-            document.getElementById('db-status').innerText = "❌ 載入失敗 (請確認 web_database.js 檔案內容)";
+            document.getElementById('db-status').innerText = "❌ 載入失敗 (請檢查檔案名稱或變數名)";
             document.getElementById('db-status').style.color = "red";
         }
     };
 
+    // 2. 轉換邏輯
     document.getElementById('convert-btn').onclick = function() {
         const input = document.getElementById('input-text').value;
         const outputArea = document.getElementById('output');
@@ -49,28 +53,36 @@
             return;
         }
 
-        if (typeof TAILO_DB === 'undefined') {
-            alert("資料庫尚未載入");
+        // 再次確認資料庫是否存在
+        if (typeof TAILO_DB === 'undefined' || !TAILO_DB.hanji) {
+            alert("資料庫尚未就緒，請檢查 web_database.js");
             return;
         }
 
         outputArea.innerText = "正在處理中...";
-
-        // 這裡我們針對輸入的每一個字進行查表
+        
         let result = "";
+        
+        // 遍歷輸入的每一個字進行查表
         for (let char of input) {
-            // 檢查字是否存在於資料庫的 hanji 屬性中
+            // 檢查該漢字是否存在於資料庫中
             if (TAILO_DB.hanji[char]) {
-                // 優先取「無」裡面的拼音，若無則取「白」或「文」
                 const entry = TAILO_DB.hanji[char];
-                const pinyin = entry.無[0] || entry.白[0] || entry.文[0] || char;
+                
+                // 根據資料結構優先序取值：無 > 白 > 文
+                // 你的資料格式：entry.無 是陣列，所以取第一個元素 [0]
+                const pinyin = (entry.無 && entry.無.length > 0) ? entry.無[0] :
+                               (entry.白 && entry.白.length > 0) ? entry.白[0] :
+                               (entry.文 && entry.文.length > 0) ? entry.文[0] : char;
+                
                 result += pinyin + " ";
             } else {
-                // 如果找不到（例如標點符號或資料庫沒收錄的字），就維持原樣
+                // 若找不到對應字（如標點符號或資料庫未收錄字），維持原樣
                 result += char;
             }
         }
 
+        // 移除多餘空格並顯示結果
         outputArea.innerText = result.trim();
     };
 </script>
