@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>臺灣閩南語臺羅轉換工具 (離線版)</title>
+    <script src="web_database.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background: #fdfdfd; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2b579a; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        textarea { width: 100%; height: 150px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom: 15px; }
+        .btn { background: #2b579a; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-size: 18px; width: 100%; font-weight: bold; }
+        #output { margin-top: 20px; padding: 15px; background: #f4f7f9; border-radius: 8px; min-height: 100px; white-space: pre-wrap; line-height: 1.8; }
+        .tag { font-size: 12px; color: #666; text-align: right; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>臺羅轉換離線版</h1>
+    
+    <p>請輸入漢字或語料：</p>
+    <textarea id="input-text" placeholder="例如：逐家好，食飽未？"></textarea>
+    
+    <button id="convert-btn" class="btn">🚀 立即轉換 (Tâi-lô)</button>
+
+    <div id="output">等待輸入中...</div>
+    <div class="tag">資料庫狀態：<span id="db-status">載入中...</span></div>
+</div>
+
+<script>
+    // 檢查 web_database.js 是否成功載入
+    window.onload = function() {
+        if (typeof web_database !== 'undefined') {
+            document.getElementById('db-status').innerText = "✅ 已就緒";
+            document.getElementById('db-status').style.color = "green";
+        } else {
+            document.getElementById('db-status').innerText = "❌ 載入失敗 (請檢查檔案名稱)";
+            document.getElementById('db-status').style.color = "red";
+        }
+    };
+
+    document.getElementById('convert-btn').onclick = function() {
+        const input = document.getElementById('input-text').value;
+        const outputArea = document.getElementById('output');
+        
+        // 假設您的 web_database.js 中有一個名為 convertToTailo 的函式
+        // 或者您在這裡實作比對字典的邏輯
+        if (input.trim() === "") {
+            alert("請先輸入文字");
+            return;
+        }
+
+        outputArea.innerText = "正在處理中...";
+        
+        // 模擬轉換邏輯 (請根據 web_database.js 的實際結構調整)
+        // 範例：let result = myCustomConvertFunction(input, web_database);
+        
+        // 這裡暫時顯示您的輸入以供測試，您可將轉換程式碼貼於此處
+        // outputArea.innerText = result;
+    };
+</script>
+</body>
+</html>
