@@ -262,7 +262,6 @@
         renderHanjiResult();
     }
 
-    // --- IPA 轉換核心邏輯 (修正資料路徑) ---
     // --- IPA 轉換核心邏輯 ---
     function segmentAndConvert(ipaStr, langData) {
         // 直接從傳入的語言資料中取得 combinations
@@ -286,66 +285,68 @@
         }
         return { segments, trace };
     }
-    
-    function convertIPA() {
-        const ipaInput = document.getElementById('ipaInput').value.trim();
-        const lang = document.getElementById('langSelect').value;
-        const resultInput = document.getElementById('ipaResult');
-        const traceDiv = document.getElementById('ipaTrace');
-    
-        // 【關鍵修正】：路徑必須指向 "2026修訂"
-        const ipaDb = DB.ipa['2026修訂']; 
         
-        if (!ipaInput || !ipaDb) {
-            resultInput.value = "-";
-            traceDiv.innerHTML = "";
-            return;
-        }
+    function convertIPA() {
+            const ipaInput = document.getElementById('ipaInput').value.trim();
+            const lang = document.getElementById('langSelect').value;
+            const resultInput = document.getElementById('ipaResult');
+            const traceDiv = document.getElementById('ipaTrace');
     
-        // 取得指定語言的資料
-        const langData = ipaDb.languages[lang];
-        if (!langData) {
-            resultInput.value = "[語言未收錄]";
-            return;
-        }
+            // 取得 2026 修訂資料庫
+            const ipaDb = DB.ipa['2026修訂'];
+            
+            if (!ipaInput || !ipaDb) {
+                resultInput.value = "-";
+                traceDiv.innerHTML = "";
+                return;
+            }
     
-        const words = ipaInput.split(/\s+/);
-        let finalOutputList = [], totalTraceLog = [];
+            const langData = ipaDb.languages[lang];
+            if (!langData) {
+                resultInput.value = "[語言未收錄]";
+                return;
+            }
     
-        words.forEach((word, idx) => {
-            // 清理長音符號，並根據重音/音節符號切分
-            let syllables = word.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim());
-            let wordSegs = [], wordTrace = [];
+            const words = ipaInput.split(/\s+/);
+            let finalOutputList = [], totalTraceLog = [];
     
-            syllables.forEach(syllable => {
-                // 呼叫轉換邏輯
-                let res = segmentAndConvert(syllable, langData);
-                if (res.segments.length > 0) {
-                    // 將同一個音節內的碎片拼接起來
-                    wordSegs.push(res.segments.join("")); 
+            words.forEach((word, wordIdx) => {
+                // 1. 移除長音符號，並根據重音/音節符號切分 (ˈ, ˌ, ., -)
+                let syllables = word.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim());
+                
+                let allSegmentsInWord = []; // 用來存放該單字內所有的轉換結果
+                let wordTrace = [];
+    
+                syllables.forEach(syllable => {
+                    let res = segmentAndConvert(syllable, langData);
+                    if (res.segments.length > 0) {
+                        // 【關鍵修正】：將所有片段直接推入扁平陣列，不再於音節內先行合併
+                        allSegmentsInWord.push(...res.segments);
+                    }
+                    wordTrace.push(...res.trace);
+                });
+    
+                if (allSegmentsInWord.length > 0) {
+                    // 【關鍵修正】：單字內的所有轉換片段都用 "-" 連接
+                    finalOutputList.push(allSegmentsInWord.join("-"));
                 }
-                wordTrace.push(...res.trace);
+                
+                if (wordTrace.length > 0) {
+                    totalTraceLog.push(`[詞${wordIdx+1}] ${wordTrace.join(", ")}`);
+                }
             });
     
-            if (wordSegs.length > 0) {
-                // 不同音節之間用 "-" 連接
-                finalOutputList.push(wordSegs.join("-"));
+            // 詞與詞之間保留空格
+            let finalRes = finalOutputList.join(" ");
+            if (finalRes) {
+                // 首字母大寫處理 (例如：li-hi -> Li-hi)
+                finalRes = finalRes.charAt(0).toUpperCase() + finalRes.slice(1);
+                resultInput.value = finalRes;
+            } else {
+                resultInput.value = "-";
             }
-            if (wordTrace.length > 0) {
-                totalTraceLog.push(`[詞${idx+1}] ${wordTrace.join(", ")}`);
-            }
-        });
-    
-        // 最終結果詞與詞之間加空格，並處理首字母大寫
-        let finalRes = finalOutputList.join(" ");
-        if (finalRes) {
-            finalRes = finalRes.charAt(0).toUpperCase() + finalRes.slice(1);
-            resultInput.value = finalRes;
-        } else {
-            resultInput.value = "-";
+            traceDiv.innerHTML = totalTraceLog.join("<br>");
         }
-        traceDiv.innerHTML = totalTraceLog.join("<br>");
-    }
 </script>
 </body>
 </html>
