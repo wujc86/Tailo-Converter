@@ -263,17 +263,17 @@
     }
 
     // --- IPA 轉換核心邏輯 (修正資料路徑) ---
-    function segmentAndConvert(part, langData) {
-        // langData 直接傳入單一語言的物件，例如 DB.ipa['2026修訂'].languages['德']
+    // --- IPA 轉換核心邏輯 ---
+    function segmentAndConvert(ipaStr, langData) {
+        // 直接從傳入的語言資料中取得 combinations
         const comboMap = langData.combinations;
-        // 依長度排序以進行「最長匹配」
         const sortedKeys = Object.keys(comboMap).sort((a, b) => b.length - a.length);
         
         let i = 0, segments = [], trace = [];
-        while (i < part.length) {
+        while (i < ipaStr.length) {
             let matched = false;
             for (let key of sortedKeys) {
-                if (part.startsWith(key, i)) {
+                if (ipaStr.startsWith(key, i)) {
                     let val = comboMap[key];
                     segments.push(val);
                     trace.push(`'${key}'→${val}`);
@@ -282,62 +282,63 @@
                     break;
                 }
             }
-            if (!matched) {
-                // 如果完全沒匹配，跳過該字元
-                i++;
-            }
+            if (!matched) i++; // 若未匹配，跳過該字元
         }
         return { segments, trace };
     }
-
+    
     function convertIPA() {
         const ipaInput = document.getElementById('ipaInput').value.trim();
         const lang = document.getElementById('langSelect').value;
         const resultInput = document.getElementById('ipaResult');
         const traceDiv = document.getElementById('ipaTrace');
-
-        // 檢查資料庫是否存在「2026修訂」
-        const ipaDb = DB.ipa['2026修訂'];
+    
+        // 【關鍵修正】：路徑必須指向 "2026修訂"
+        const ipaDb = DB.ipa['2026修訂']; 
+        
         if (!ipaInput || !ipaDb) {
             resultInput.value = "-";
             traceDiv.innerHTML = "";
             return;
         }
-
-        // 取得該語言的資料
+    
+        // 取得指定語言的資料
         const langData = ipaDb.languages[lang];
         if (!langData) {
-            resultInput.value = "[不支援此語言]";
+            resultInput.value = "[語言未收錄]";
             return;
         }
-
+    
         const words = ipaInput.split(/\s+/);
         let finalOutputList = [], totalTraceLog = [];
-
-        words.forEach((word, wordIdx) => {
-            // 移除長音符號，並依照重音或點切分音節
+    
+        words.forEach((word, idx) => {
+            // 清理長音符號，並根據重音/音節符號切分
             let syllables = word.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim());
             let wordSegs = [], wordTrace = [];
-
+    
             syllables.forEach(syllable => {
+                // 呼叫轉換邏輯
                 let res = segmentAndConvert(syllable, langData);
                 if (res.segments.length > 0) {
-                    wordSegs.push(res.segments.join("")); // 同一音節內的 IPA 組合併
+                    // 將同一個音節內的碎片拼接起來
+                    wordSegs.push(res.segments.join("")); 
                 }
                 wordTrace.push(...res.trace);
             });
-
+    
             if (wordSegs.length > 0) {
-                finalOutputList.push(wordSegs.join("-")); // 音節間加連字號
+                // 不同音節之間用 "-" 連接
+                finalOutputList.push(wordSegs.join("-"));
             }
             if (wordTrace.length > 0) {
-                totalTraceLog.push(`[詞${wordIdx+1}] ${wordTrace.join(", ")}`);
+                totalTraceLog.push(`[詞${idx+1}] ${wordTrace.join(", ")}`);
             }
         });
-
-        let finalRes = finalOutputList.join(" "); // 詞與詞之間用空格
+    
+        // 最終結果詞與詞之間加空格，並處理首字母大寫
+        let finalRes = finalOutputList.join(" ");
         if (finalRes) {
-            // 首字母大寫處理
             finalRes = finalRes.charAt(0).toUpperCase() + finalRes.slice(1);
             resultInput.value = finalRes;
         } else {
