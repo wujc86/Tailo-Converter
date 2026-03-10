@@ -183,6 +183,7 @@
             DB = window.TAILO_DB;
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
+            console.log("資料庫載入成功:", Object.keys(DB.ipa)); // 偵錯用
         } else {
             alert("錯誤：無法讀取 web_database.js");
         }
@@ -230,6 +231,7 @@
 
             if (isH && DB.hanji[char]) {
                 const data = DB.hanji[char];
+                // 優先順序：文 > 無 > 白
                 if (data['文'] && data['文'].length > 0) defaultPinyin = data['文'][0];
                 else if (data['無'] && data['無'].length > 0) defaultPinyin = data['無'][0];
                 else if (data['白'] && data['白'].length > 0) defaultPinyin = data['白'][0];
@@ -260,23 +262,30 @@
         renderHanjiResult();
     }
 
-    // --- IPA 轉換核心邏輯 ---
-    function segmentAndConvert(ipaStr, mapping, lang) {
-        if (!mapping['languages'][lang]) lang = '英';
-        const comboMap = mapping['languages'][lang]['combinations'];
+    // --- IPA 轉換核心邏輯 (修正資料路徑) ---
+    function segmentAndConvert(part, langData) {
+        // langData 直接傳入單一語言的物件，例如 DB.ipa['2026修訂'].languages['德']
+        const comboMap = langData.combinations;
+        // 依長度排序以進行「最長匹配」
         const sortedKeys = Object.keys(comboMap).sort((a, b) => b.length - a.length);
+        
         let i = 0, segments = [], trace = [];
-        while (i < ipaStr.length) {
+        while (i < part.length) {
             let matched = false;
             for (let key of sortedKeys) {
-                if (ipaStr.startsWith(key, i)) {
+                if (part.startsWith(key, i)) {
                     let val = comboMap[key];
                     segments.push(val);
                     trace.push(`'${key}'→${val}`);
-                    i += key.length; matched = true; break;
+                    i += key.length; 
+                    matched = true; 
+                    break;
                 }
             }
-            if (!matched) i++;
+            if (!matched) {
+                // 如果完全沒匹配，跳過該字元
+                i++;
+            }
         }
         return { segments, trace };
     }
@@ -287,30 +296,54 @@
         const resultInput = document.getElementById('ipaResult');
         const traceDiv = document.getElementById('ipaTrace');
 
-        if (!ipaInput || !DB.ipa) {
+        // 檢查資料庫是否存在「2026修訂」
+        const ipaDb = DB.ipa['2026修訂'];
+        if (!ipaInput || !ipaDb) {
             resultInput.value = "-";
             traceDiv.innerHTML = "";
             return;
         }
 
-        const words = ipaInput.split(/\s+/);
-        let finalPriList = [], traceLog = [];
+        // 取得該語言的資料
+        const langData = ipaDb.languages[lang];
+        if (!langData) {
+            resultInput.value = "[不支援此語言]";
+            return;
+        }
 
-        words.forEach((word, idx) => {
-            let parts = word.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim());
+        const words = ipaInput.split(/\s+/);
+        let finalOutputList = [], totalTraceLog = [];
+
+        words.forEach((word, wordIdx) => {
+            // 移除長音符號，並依照重音或點切分音節
+            let syllables = word.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim());
             let wordSegs = [], wordTrace = [];
-            parts.forEach(part => {
-                let res = segmentAndConvert(part, DB.ipa['主要'], lang);
-                wordSegs.push(...res.segments);
+
+            syllables.forEach(syllable => {
+                let res = segmentAndConvert(syllable, langData);
+                if (res.segments.length > 0) {
+                    wordSegs.push(res.segments.join("")); // 同一音節內的 IPA 組合併
+                }
                 wordTrace.push(...res.trace);
             });
-            if (wordSegs.length > 0) finalPriList.push(wordSegs.join("-"));
-            if (wordTrace.length > 0) traceLog.push(`[詞${idx+1}] ${wordTrace.join(", ")}`);
+
+            if (wordSegs.length > 0) {
+                finalOutputList.push(wordSegs.join("-")); // 音節間加連字號
+            }
+            if (wordTrace.length > 0) {
+                totalTraceLog.push(`[詞${wordIdx+1}] ${wordTrace.join(", ")}`);
+            }
         });
 
-        let finalRes = finalPriList.join("-");
-        resultInput.value = finalRes ? finalRes.charAt(0).toUpperCase() + finalRes.slice(1) : "-";
-        traceDiv.innerHTML = traceLog.join("<br>");
+        let finalRes = finalOutputList.join(" "); // 詞與詞之間用空格
+        if (finalRes) {
+            // 首字母大寫處理
+            finalRes = finalRes.charAt(0).toUpperCase() + finalRes.slice(1);
+            resultInput.value = finalRes;
+        } else {
+            resultInput.value = "-";
+        }
+        traceDiv.innerHTML = totalTraceLog.join("<br>");
     }
 </script>
 </body>
