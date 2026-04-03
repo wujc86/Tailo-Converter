@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>臺羅拼音轉換工具</title>
+    <title>臺羅拼音轉換工具 - 專業批次版</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="web_database.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
             --accent-color: #3498db;
+            --success-color: #27ae60;
             --bg-color: #f5f6fa;
             --card-bg: #ffffff;
         }
@@ -34,11 +36,11 @@
         }
 
         .card-header {
-            font-size: 1em;
+            font-size: 1.1em;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             border-bottom: 2px solid var(--bg-color);
-            padding-bottom: 5px;
+            padding-bottom: 8px;
             display: flex;
             align-items: center;
         }
@@ -60,68 +62,48 @@
             margin-top: 10px;
         }
 
-        .result-label { font-size: 0.8em; color: #7f8c8d; margin-bottom: 4px; }
+        .result-label { font-size: 0.85em; color: #7f8c8d; margin-bottom: 4px; }
         .result-content { font-size: 1.2em; font-weight: bold; color: #2c3e50; min-height: 1.2em; }
 
-        /* --- 詳細資訊佈局 --- */
-        #hanjiDetails { display: flex; flex-direction: column; gap: 4px; }
-
-        .detail-row {
-            display: flex;
-            align-items: flex-start;
-            padding: 6px 0;
-            border-bottom: 1px solid #f0f0f0;
+        .batch-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 20px; 
         }
 
-        .hanji-col {
-            min-width: 35px;
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #2c3e50;
-            text-align: center;
-            border-right: 2px solid #eee;
-            margin-right: 12px;
-        }
-
-        .readings-col { display: flex; flex-wrap: wrap; gap: 8px; }
-
-        .variant-item {
-            cursor: pointer;
-            padding: 4px 10px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            background-color: #fff;
-            font-size: 0.95em;
-            display: flex;
-            align-items: center;
-            transition: all 0.2s;
-        }
-
-        .variant-item:hover {
-            background-color: #ebf5ff;
-            border-color: var(--accent-color);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 1px 5px;
-            border-radius: 3px;
-            font-size: 0.75em;
-            margin-right: 5px;
+        .btn {
+            background-color: var(--accent-color);
             color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
             font-weight: bold;
+            font-size: 1em;
+            transition: background 0.2s;
         }
+        .btn:hover { background-color: #2980b9; }
+        .btn-download { background-color: var(--success-color); width: 100%; margin-top: 10px; }
 
-        .badge-man { background-color: #e74c3c; } /* 文 */
-        .badge-bo { background-color: #f39c12; }  /* 無 */
-        .badge-peh { background-color: #27ae60; } /* 白 */
-        .badge-sec { background-color: #95a5a6; } /* 替、俗 */
+        .note { font-size: 0.8em; color: #e67e22; font-weight: normal; margin-top: 2px; display: block; }
+
+        #hanjiDetails { display: flex; flex-direction: column; gap: 4px; }
+        .detail-row { display: flex; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+        .hanji-col { min-width: 40px; font-size: 1.2em; font-weight: bold; color: #2c3e50; text-align: center; border-right: 2px solid #eee; margin-right: 12px; }
+        .readings-col { display: flex; flex-wrap: wrap; gap: 8px; }
+        .variant-item { cursor: pointer; padding: 4px 10px; border: 1px solid #e0e0e0; border-radius: 6px; background-color: #fff; font-size: 0.95em; display: flex; align-items: center; }
+        
+        .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 0.75em; margin-right: 5px; color: white; font-weight: bold; }
+        .badge-man { background-color: #e74c3c; } 
+        .badge-bo { background-color: #f39c12; }  
+        .badge-peh { background-color: #27ae60; } 
+        .badge-sec { background-color: #95a5a6; } 
 
         .loading { text-align: center; color: #7f8c8d; padding: 40px; }
         .hidden { display: none; }
         .editable-result { width: 100%; padding: 10px; border: 1px solid #e9ecef; background-color: #f8f9fa; border-radius: 4px; font-size: 1.1em; font-weight: bold; color: #2c3e50; }
-        
-        .trace-box { font-size: 0.85em; color: #666; font-family: monospace; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px; }
+        .trace-box { font-size: 0.85em; color: #666; font-family: monospace; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -134,42 +116,71 @@
     <div class="card">
         <div class="card-header">🅰️ 漢字轉臺羅</div>
         <div style="margin-bottom:10px;">
-            <label style="font-weight:bold; font-size: 0.9em;">輸入漢字：</label>
-            <input type="text" id="hanjiInput" placeholder="例如：臺灣" oninput="convertHanji()">
+            <input type="text" id="hanjiInput" placeholder="輸入漢字，例如：臺灣" oninput="convertHanji()">
         </div>
-        
         <div class="result-box">
-            <div class="result-label">建議臺羅 (點擊下方選項可即時更換讀音)</div>
+            <div class="result-label">建議臺羅</div>
             <div id="hanjiResult" class="result-content">-</div>
         </div>
-        
         <div class="result-box" style="background: white;">
-            <div class="result-label">詳細資訊</div>
             <div id="hanjiDetails"></div>
         </div>
     </div>
 
     <div class="card">
         <div class="card-header">🗣️ IPA 轉臺羅</div>
-        <div style="margin-bottom:10px;">
-            <label style="font-weight:bold; font-size: 0.9em;">選擇語言：</label>
-            <select id="langSelect" onchange="convertIPA()" style="width: auto;">
-                <option value="英">英語</option>
-                <option value="德">德語</option>
-                <option value="法">法語</option>
-                <option value="西">西班牙語</option>
-                <option value="義">義大利語</option>
-                <option value="俄">俄語</option>
-            </select>
-        </div>
-        <div style="margin-bottom:10px;">
-            <label style="font-weight:bold; font-size: 0.9em;">輸入 IPA：</label>
-            <input type="text" id="ipaInput" placeholder="例如：bɑɚˈbedos" oninput="convertIPA()">
+        <div class="batch-grid" style="grid-template-columns: 1fr 3fr; margin-bottom: 10px;">
+            <div>
+                <label class="result-label">選擇語言</label>
+                <select id="langSelect" onchange="convertIPA()">
+                    <option value="英">英語</option>
+                    <option value="德">德語</option>
+                    <option value="法">法語</option>
+                    <option value="西">西班牙語</option>
+                    <option value="義">義大利語</option>
+                    <option value="俄">俄語</option>
+                </select>
+            </div>
+            <div>
+                <label class="result-label">輸入 IPA</label>
+                <input type="text" id="ipaInput" placeholder="例如：bɑɚˈbedos" oninput="convertIPA()">
+            </div>
         </div>
         <div class="result-box">
-            <div class="result-label">轉換結果 (可手動修改)</div>
             <input type="text" id="ipaResult" class="editable-result" value="-">
             <div id="ipaTrace" class="trace-box"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">📊 Excel 批次處理</div>
+        <div style="margin-bottom:15px;">
+            <label style="font-weight:bold;">1. 上傳 Excel 檔案：</label>
+            <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleFileUpload(this)">
+        </div>
+        
+        <div id="batchSettings" class="hidden">
+            <p style="font-weight: bold; color: var(--accent-color); margin-bottom: 10px;">2. 指定來源欄位：</p>
+            <div class="batch-grid">
+                <div>
+                    <label class="result-label">華語名稱欄位</label>
+                    <select id="colHanji"></select>
+                </div>
+                <div>
+                    <label class="result-label">IPA 欄位</label>
+                    <select id="colIPA"></select>
+                </div>
+                <div>
+                    <label class="result-label">語言別欄位</label>
+                    <select id="colLang"></select>
+                    <span class="note">※ Excel 欄位內請填：英德法西義俄任一字，未填者預設為英</span>
+                </div>
+            </div>
+            <button class="btn" onclick="processBatch()">開始批次轉換</button>
+        </div>
+
+        <div id="downloadArea" class="hidden">
+            <button class="btn btn-download" onclick="downloadExcel()">✅ 下載結果檔案</button>
         </div>
     </div>
 </div>
@@ -177,13 +188,14 @@
 <script>
     let DB = null;
     let selectedReadings = []; 
+    let excelRows = [];
+    let processedWorkbook = null;
 
     window.onload = function() {
         if (window.TAILO_DB) {
             DB = window.TAILO_DB;
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
-            console.log("資料庫載入成功:", Object.keys(DB.ipa)); // 偵錯用
         } else {
             alert("錯誤：無法讀取 web_database.js");
         }
@@ -191,83 +203,30 @@
 
     function isHanji(char) { return /\p{Unified_Ideograph}/u.test(char); }
 
-    function updateReading(index, newPinyin) {
-        selectedReadings[index].pinyin = newPinyin;
-        renderHanjiResult();
+    function getSingleHanjiPinyin(char) {
+        if (!isHanji(char) || !DB.hanji[char]) return char;
+        const data = DB.hanji[char];
+        if (data['文'] && data['文'].length > 0) return data['文'][0];
+        if (data['無'] && data['無'].length > 0) return data['無'][0];
+        if (data['白'] && data['白'].length > 0) return data['白'][0];
+        return char;
     }
 
-    function renderHanjiResult() {
-        const resultDiv = document.getElementById('hanjiResult');
-        let output = "";
-        for (let i = 0; i < selectedReadings.length; i++) {
-            const current = selectedReadings[i];
-            const next = selectedReadings[i + 1];
-            output += current.pinyin;
-            if (current.isHan && next && next.isHan) {
-                output += "-";
+    function getAllHanjiReadingsFormatted(char) {
+        if (!isHanji(char) || !DB.hanji[char]) return char + ":未收錄";
+        const data = DB.hanji[char];
+        let typeGroups = [];
+        ['文', '無', '白', '替', '俗'].forEach(k => {
+            if (data[k] && data[k].length > 0) {
+                typeGroups.push(`${k}:${data[k].join(", ")}`);
             }
-        }
-        resultDiv.innerText = output || "-";
-    }
-
-    function convertHanji() {
-        const input = document.getElementById('hanjiInput').value;
-        const detailsDiv = document.getElementById('hanjiDetails');
-        if (!input) {
-            selectedReadings = [];
-            document.getElementById('hanjiResult').innerText = "-";
-            detailsDiv.innerHTML = "";
-            return;
-        }
-
-        selectedReadings = [];
-        let detailsHtml = "";
-        const chars = Array.from(input); 
-
-        chars.forEach((char, idx) => {
-            const isH = isHanji(char);
-            let defaultPinyin = char;
-            let rowReadings = "";
-
-            if (isH && DB.hanji[char]) {
-                const data = DB.hanji[char];
-                // 優先順序：文 > 無 > 白
-                if (data['文'] && data['文'].length > 0) defaultPinyin = data['文'][0];
-                else if (data['無'] && data['無'].length > 0) defaultPinyin = data['無'][0];
-                else if (data['白'] && data['白'].length > 0) defaultPinyin = data['白'][0];
-
-                const types = [
-                    {k: '文', c: 'badge-man'}, {k: '無', c: 'badge-bo'}, 
-                    {k: '白', c: 'badge-peh'}, {k: '替', c: 'badge-sec'}, {k: '俗', c: 'badge-sec'}
-                ];
-
-                types.forEach(t => {
-                    if (data[t.k]) {
-                        data[t.k].forEach(p => {
-                            rowReadings += `
-                                <div class="variant-item" onclick="updateReading(${idx}, '${p}')">
-                                    <span class="badge ${t.c}">${t.k}</span>${p}
-                                </div>`;
-                        });
-                    }
-                });
-                detailsHtml += `<div class="detail-row"><div class="hanji-col">${char}</div><div class="readings-col">${rowReadings}</div></div>`;
-            } else if (isH) {
-                detailsHtml += `<div class="detail-row"><div class="hanji-col">${char}</div><div class="readings-col" style="color:#999;">未收錄</div></div>`;
-            }
-            selectedReadings.push({ pinyin: defaultPinyin, isHan: isH });
         });
-
-        detailsDiv.innerHTML = detailsHtml;
-        renderHanjiResult();
+        return `${char}:${typeGroups.join(", ")}`;
     }
 
-    // --- IPA 轉換核心邏輯 ---
     function segmentAndConvert(ipaStr, langData) {
-        // 直接從傳入的語言資料中取得 combinations
         const comboMap = langData.combinations;
         const sortedKeys = Object.keys(comboMap).sort((a, b) => b.length - a.length);
-        
         let i = 0, segments = [], trace = [];
         while (i < ipaStr.length) {
             let matched = false;
@@ -281,72 +240,208 @@
                     break;
                 }
             }
-            if (!matched) i++; // 若未匹配，跳過該字元
+            if (!matched) i++; 
         }
         return { segments, trace };
     }
-        
-    function convertIPA() {
-            const ipaInput = document.getElementById('ipaInput').value.trim();
-            const lang = document.getElementById('langSelect').value;
-            const resultInput = document.getElementById('ipaResult');
-            const traceDiv = document.getElementById('ipaTrace');
-    
-            // 取得 2026 修訂資料庫
-            const ipaDb = DB.ipa['2026修訂'];
-            
-            if (!ipaInput || !ipaDb) {
-                resultInput.value = "-";
-                traceDiv.innerHTML = "";
-                return;
-            }
-    
-            const langData = ipaDb.languages[lang];
-            if (!langData) {
-                resultInput.value = "[語言未收錄]";
-                return;
-            }
-    
-            const words = ipaInput.split(/\s+/);
-            let finalOutputList = [], totalTraceLog = [];
-    
-            words.forEach((word, wordIdx) => {
-                // 1. 移除長音符號，並根據重音/音節符號切分 (ˈ, ˌ, ., -)
-                let syllables = word.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim());
-                
-                let allSegmentsInWord = []; // 用來存放該單字內所有的轉換結果
-                let wordTrace = [];
-    
-                syllables.forEach(syllable => {
-                    let res = segmentAndConvert(syllable, langData);
-                    if (res.segments.length > 0) {
-                        // 【關鍵修正】：將所有片段直接推入扁平陣列，不再於音節內先行合併
-                        allSegmentsInWord.push(...res.segments);
-                    }
-                    wordTrace.push(...res.trace);
-                });
-    
-                if (allSegmentsInWord.length > 0) {
-                    // 【關鍵修正】：單字內的所有轉換片段都用 "-" 連接
-                    finalOutputList.push(allSegmentsInWord.join("-"));
-                }
-                
-                if (wordTrace.length > 0) {
-                    totalTraceLog.push(`[詞${wordIdx+1}] ${wordTrace.join(", ")}`);
-                }
-            });
-    
-            // 詞與詞之間保留空格
-            let finalRes = finalOutputList.join(" ");
-            if (finalRes) {
-                // 首字母大寫處理 (例如：li-hi -> Li-hi)
-                finalRes = finalRes.charAt(0).toUpperCase() + finalRes.slice(1);
-                resultInput.value = finalRes;
-            } else {
-                resultInput.value = "-";
-            }
-            traceDiv.innerHTML = totalTraceLog.join("<br>");
+
+    // 單筆 UI 邏輯
+    function updateReading(index, newPinyin) {
+        selectedReadings[index].pinyin = newPinyin;
+        renderHanjiResult();
+    }
+
+    function renderHanjiResult() {
+        const resultDiv = document.getElementById('hanjiResult');
+        let output = "";
+        for (let i = 0; i < selectedReadings.length; i++) {
+            const current = selectedReadings[i];
+            const next = selectedReadings[i + 1];
+            output += current.pinyin;
+            if (current.isHan && next && next.isHan) output += "-";
         }
+        resultDiv.innerText = output || "-";
+    }
+
+    function convertHanji() {
+        const input = document.getElementById('hanjiInput').value;
+        const detailsDiv = document.getElementById('hanjiDetails');
+        if (!input) {
+            selectedReadings = [];
+            document.getElementById('hanjiResult').innerText = "-";
+            detailsDiv.innerHTML = "";
+            return;
+        }
+        selectedReadings = [];
+        let detailsHtml = "";
+        const chars = Array.from(input); 
+
+        chars.forEach((char, idx) => {
+            const isH = isHanji(char);
+            let defaultPinyin = char;
+            let rowReadings = "";
+            if (isH && DB.hanji[char]) {
+                const data = DB.hanji[char];
+                defaultPinyin = getSingleHanjiPinyin(char);
+                ['文', '無', '白', '替', '俗'].forEach(k => {
+                    if (data[k]) {
+                        data[k].forEach(p => {
+                            let c = k==='文'?'badge-man':k==='白'?'badge-peh':k==='無'?'badge-bo':'badge-sec';
+                            rowReadings += `<div class="variant-item" onclick="updateReading(${idx}, '${p}')"><span class="badge ${c}">${k}</span>${p}</div>`;
+                        });
+                    }
+                });
+                detailsHtml += `<div class="detail-row"><div class="hanji-col">${char}</div><div class="readings-col">${rowReadings}</div></div>`;
+            }
+            selectedReadings.push({ pinyin: defaultPinyin, isHan: isH });
+        });
+        detailsDiv.innerHTML = detailsHtml;
+        renderHanjiResult();
+    }
+
+    function convertIPA() {
+        const ipaInput = document.getElementById('ipaInput').value.trim();
+        const lang = document.getElementById('langSelect').value;
+        const resultInput = document.getElementById('ipaResult');
+        const traceDiv = document.getElementById('ipaTrace');
+        const ipaDb = DB.ipa['2026修訂'];
+        
+        if (!ipaInput || !ipaDb) { resultInput.value = "-"; traceDiv.innerHTML = ""; return; }
+        const langData = ipaDb.languages[lang];
+        if (!langData) { resultInput.value = "[語言未收錄]"; return; }
+        
+        const words = ipaInput.split(/\s+/);
+        let finalOutputList = [], totalTraceLog = [];
+        words.forEach((word, wordIdx) => {
+            let syllables = word.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim());
+            let segments = [], trace = [];
+            syllables.forEach(s => {
+                let res = segmentAndConvert(s, langData);
+                segments.push(...res.segments);
+                trace.push(...res.trace);
+            });
+            if (segments.length > 0) finalOutputList.push(segments.join("-"));
+            if (trace.length > 0) totalTraceLog.push(`[${word}] ${trace.join(", ")}`);
+        });
+
+        let finalRes = finalOutputList.join(" ");
+        if (finalRes) {
+            resultInput.value = finalRes.charAt(0).toUpperCase() + finalRes.slice(1);
+        } else { resultInput.value = "-"; }
+        traceDiv.innerHTML = totalTraceLog.join("\n");
+    }
+
+    // 批次處理邏輯
+    function handleFileUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            excelRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+            
+            const range = XLSX.utils.decode_range(sheet['!ref']);
+            let headers = [];
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell = sheet[XLSX.utils.encode_cell({ r: 0, c: C })];
+                headers.push(cell ? cell.v : "欄位_" + C);
+            }
+
+            ['colHanji', 'colIPA', 'colLang'].forEach(id => {
+                const sel = document.getElementById(id);
+                sel.innerHTML = '<option value="">--選擇欄位--</option>';
+                headers.forEach(h => {
+                    const opt = document.createElement('option');
+                    opt.value = h; opt.textContent = h;
+                    sel.appendChild(opt);
+                });
+            });
+            document.getElementById('batchSettings').classList.remove('hidden');
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function processBatch() {
+        const hanCol = document.getElementById('colHanji').value;
+        const ipaCol = document.getElementById('colIPA').value;
+        const langCol = document.getElementById('colLang').value;
+        const ipaDb = DB.ipa['2026修訂'];
+
+        if (!hanCol || !ipaCol || !langCol) { alert("請指定欄位"); return; }
+
+        const results = excelRows.map(row => {
+            let newRow = { ...row };
+            
+            // 1. 漢字處理
+            const hanInput = String(row[hanCol] || "").trim();
+            if (hanInput) {
+                const chars = Array.from(hanInput);
+                let pinyinArr = [];
+                let listArr = [];
+                chars.forEach((c, i) => {
+                    pinyinArr.push(getSingleHanjiPinyin(c));
+                    if (isHanji(c)) listArr.push(getAllHanjiReadingsFormatted(c));
+                });
+                
+                let combined = "";
+                for(let i=0; i<pinyinArr.length; i++) {
+                    combined += pinyinArr[i];
+                    if (isHanji(chars[i]) && i < chars.length-1 && isHanji(chars[i+1])) combined += "-";
+                }
+                newRow["建議漢字臺羅"] = combined;
+                newRow["各漢字臺羅列表"] = listArr.join("\n");
+            }
+
+            // 2. IPA 處理 (含預設語言邏輯)
+            const ipaVal = String(row[ipaCol] || "").trim();
+            let langVal = String(row[langCol] || "").trim();
+            
+            // 如果沒填或不支援，預設用「英」
+            if (!langVal || !ipaDb.languages[langVal]) {
+                langVal = "英";
+            }
+            
+            const langData = ipaDb.languages[langVal];
+            if (ipaVal && langData) {
+                const words = ipaVal.split(/\s+/);
+                let outs = [], logs = [];
+                words.forEach(w => {
+                    let sylls = w.replace(/ː/g, '').split(/[ˈˌ.\-]/).filter(p => p.trim());
+                    let segs = [], trs = [];
+                    sylls.forEach(s => {
+                        let res = segmentAndConvert(s, langData);
+                        segs.push(...res.segments);
+                        trs.push(...res.trace);
+                    });
+                    if (segs.length > 0) outs.push(segs.join("-"));
+                    logs.push(`${w}(${trs.join(", ")})`);
+                });
+                let resStr = outs.join(" ");
+                newRow["IPA建議臺羅"] = resStr ? (resStr.charAt(0).toUpperCase() + resStr.slice(1)) : "";
+                newRow["IPA轉換過程"] = logs.join(" | ");
+            } else if (ipaVal) {
+                newRow["IPA建議臺羅"] = "";
+                newRow["IPA轉換過程"] = "查無對應語言規則";
+            }
+
+            return newRow;
+        });
+
+        const newWS = XLSX.utils.json_to_sheet(results);
+        processedWorkbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(processedWorkbook, newWS, "結果");
+        
+        document.getElementById('downloadArea').classList.remove('hidden');
+        alert("批次轉換完成！");
+    }
+
+    function downloadExcel() {
+        if (processedWorkbook) {
+            XLSX.writeFile(processedWorkbook, "臺羅批次轉換結果.xlsx");
+        }
+    }
 </script>
 </body>
 </html>
