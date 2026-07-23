@@ -103,9 +103,9 @@ def build_ipa_database(path: Path) -> dict[str, object]:
                 combinations = languages[language]["combinations"]
                 for consonant in consonants:
                     for vowel in vowels:
-                        # 「拼字」是資料表的特殊標記：ə、ɚ、ɜ、ɝ 不轉寫，
-                        # 而是直接保留原 IPA 字元。
-                        combinations[consonant + vowel] = vowel if tailo == "拼字" else tailo
+                        # 「拼字」是資料表指定的輸出文字；例如 ə、ɚ、ɜ、ɝ
+                        # 都輸出為「拼字」。
+                        combinations[consonant + vowel] = tailo
 
     return {IPA_SHEET: {"languages": languages}}
 
